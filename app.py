@@ -33,14 +33,16 @@ def load_model_and_data():
         mnt_cols = [col for col in df.columns if col.startswith('Mnt')]
         df['Total_Spend'] = df[mnt_cols].sum(axis=1)
         df['Family_Size'] = df['Kidhome'] + df['Teenhome'] + 1
-        df = df.dropna()
+        # Use the exact feature names the scaler was trained on
+        relevant_features = [
+            'Income', 'Age', 'Total_Spend', 'Recency',
+            'NumWebPurchases', 'NumCatalogPurchases', 'NumStorePurchases',
+            'NumWebVisitsMonth', 'NumDealsPurchases', 'Kidhome', 'Teenhome'
+        ]
 
-        relevant_features = df.select_dtypes(include=[np.number]).columns.tolist()
-        exclude_features = ['ID', 'Year_Birth', 'Z_CostContact', 'Z_Revenue']
-        relevant_features = [col for col in relevant_features if col not in exclude_features]
-
+        df = df.dropna(subset=relevant_features)
         df_selected = df[relevant_features].copy()
-        scaled = scaler.transform(df_selected)
+        scaled = scaler.transform(df_selected.fillna(0))
 
         pca = PCA(n_components=2)
         df_pca = pca.fit_transform(scaled)
@@ -282,24 +284,24 @@ else:
 st.markdown("---")
 st.subheader("Cluster Samples")
 
-samples = []
+cluster_samples = {}
 for cluster_id in range(3):
-    for i in range(2):  # 2 samples per cluster
-        sample = df[df['Cluster'] == cluster_id].sample(1, random_state=42 + cluster_id * 2 + i).iloc[0]
-        sample_data = {
-            'Cluster': cluster_info[cluster_id]['name'],
-            'Income': int(sample['Income']),
-            'Age': int(sample['Age']),
-            'Total Spend': int(sample['Total_Spend']),
-            'Recency': int(sample['Recency']),
-            'Num Web Purchases': int(sample['NumWebPurchases']),
-            'Num Catalog Purchases': int(sample['NumCatalogPurchases']),
-            'Num Store Purchases': int(sample['NumStorePurchases']),
-            'Num Web Visits Month': int(sample['NumWebVisitsMonth']),
-            'Num Deals Purchases': int(sample['NumDealsPurchases']),
-            'Kid Home': int(sample['Kidhome']),
-            'Teen Home': int(sample['Teenhome'])
-        }
-        samples.append(sample_data)
+    sample = df[df['Cluster'] == cluster_id].sample(1, random_state=42).iloc[0]
+    cluster_samples[cluster_id] = sample
 
-st.dataframe(pd.DataFrame(samples), use_container_width=True, hide_index=True)
+for cluster_id, sample in cluster_samples.items():
+    st.markdown(f"**{cluster_info[cluster_id]['name']} Sample:**")
+    sample_data = {
+        'Income': int(sample['Income']),
+        'Age': int(sample['Age']),
+        'Total Spend': int(sample['Total_Spend']),
+        'Recency': int(sample['Recency']),
+        'Num Web Purchases': int(sample['NumWebPurchases']),
+        'Num Catalog Purchases': int(sample['NumCatalogPurchases']),
+        'Num Store Purchases': int(sample['NumStorePurchases']),
+        'Num Web Visits Month': int(sample['NumWebVisitsMonth']),
+        'Num Deals Purchases': int(sample['NumDealsPurchases']),
+        'Kid Home': int(sample['Kidhome']),
+        'Teen Home': int(sample['Teenhome'])
+    }
+    st.dataframe(pd.DataFrame([sample_data]), use_container_width=True, hide_index=True)
