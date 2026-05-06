@@ -284,24 +284,15 @@ else:
 st.markdown("---")
 st.subheader("Cluster Samples")
 
-cluster_samples = {}
-for cluster_id in range(3):
-    sample = df[df['Cluster'] == cluster_id].sample(1, random_state=42).iloc[0]
-    cluster_samples[cluster_id] = sample
+samples = df.sample(n=min(5, len(df)), random_state=42)[
+    ['Cluster', 'Income', 'Age', 'Total_Spend', 'Recency',
+     'NumWebPurchases', 'NumCatalogPurchases', 'NumStorePurchases',
+     'NumWebVisitsMonth', 'NumDealsPurchases', 'Kidhome', 'Teenhome']
+].copy()
 
-for cluster_id, sample in cluster_samples.items():
-    st.markdown(f"**{cluster_info[cluster_id]['name']} Sample:**")
-    sample_data = {
-        'Income': int(sample['Income']),
-        'Age': int(sample['Age']),
-        'Total Spend': int(sample['Total_Spend']),
-        'Recency': int(sample['Recency']),
-        'Num Web Purchases': int(sample['NumWebPurchases']),
-        'Num Catalog Purchases': int(sample['NumCatalogPurchases']),
-        'Num Store Purchases': int(sample['NumStorePurchases']),
-        'Num Web Visits Month': int(sample['NumWebVisitsMonth']),
-        'Num Deals Purchases': int(sample['NumDealsPurchases']),
-        'Kid Home': int(sample['Kidhome']),
-        'Teen Home': int(sample['Teenhome'])
-    }
-    st.dataframe(pd.DataFrame([sample_data]), use_container_width=True, hide_index=True)
+samples['Cluster'] = samples['Cluster'].map(lambda c: cluster_info[c]['name'])
+samples.columns = ['Segment', 'Income', 'Age', 'Total Spend', 'Recency',
+                   'Web Purchases', 'Catalog Purchases', 'Store Purchases',
+                   'Web Visits/Month', 'Deals Purchases', 'Kid Home', 'Teen Home']
+
+st.dataframe(samples.reset_index(drop=True), use_container_width=True, hide_index=True)
