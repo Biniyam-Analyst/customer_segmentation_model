@@ -275,21 +275,20 @@ else:
     # Initial page when the button is not clicked
     st.markdown("---")
     st.info("Enter customer information in the sidebar to find their segment.")
-       
 
-# Cluster samples
-st.markdown("---")
-st.subheader("Cluster Samples")
+    # Cluster samples
+    st.markdown("---")
+    st.subheader("Cluster Samples")
 
-samples = df.sample(n=min(5, len(df)), random_state=42)[
-    ['Cluster', 'Income', 'Age', 'Total_Spend', 'Recency',
-     'NumWebPurchases', 'NumCatalogPurchases', 'NumStorePurchases',
-     'NumWebVisitsMonth', 'NumDealsPurchases', 'Kidhome', 'Teenhome']
-].copy()
+    samples = df.sample(n=min(5, len(df)), random_state=42)[
+        ['Cluster', 'Income', 'Age', 'Total_Spend', 'Recency',
+         'NumWebPurchases', 'NumCatalogPurchases', 'NumStorePurchases',
+         'NumWebVisitsMonth', 'NumDealsPurchases', 'Kidhome', 'Teenhome']
+    ].copy()
 
-samples['Cluster'] = samples['Cluster'].map(lambda c: cluster_info[c]['name'])
-samples.columns = ['Segment', 'Income', 'Age', 'Total Spend', 'Recency',
-                   'Web Purchases', 'Catalog Purchases', 'Store Purchases',
-                   'Web Visits/Month', 'Deals Purchases', 'Kid Home', 'Teen Home']
+    samples['Cluster'] = samples['Cluster'].map(lambda c: cluster_info[c]['name'])
+    samples.columns = ['Segment', 'Income', 'Age', 'Total Spend', 'Recency',
+                       'Web Purchases', 'Catalog Purchases', 'Store Purchases',
+                       'Web Visits/Month', 'Deals Purchases', 'Kid Home', 'Teen Home']
 
-st.dataframe(samples.reset_index(drop=True), use_container_width=True, hide_index=True)
+    st.dataframe(samples.reset_index(drop=True), use_container_width=True, hide_index=True)
