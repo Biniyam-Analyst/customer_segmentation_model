@@ -27,7 +27,7 @@ def load_model_and_data():
 
         # Recreate the features used in training
         df['Dt_Customer'] = pd.to_datetime(df['Dt_Customer'], dayfirst=True)
-        current_date = pd.to_datetime('2026-04-18')
+        current_date = pd.Timestamp.today()
         df['Tenure'] = (current_date - df['Dt_Customer']).dt.days
         df['Age'] = 2026 - df['Year_Birth']
         mnt_cols = [col for col in df.columns if col.startswith('Mnt')]
@@ -49,6 +49,8 @@ def load_model_and_data():
 
         # Pre-predict clusters for all customers
         df['Cluster'] = Kmeans.predict(df_pca)
+        df['PC1'] = df_pca[:, 0]
+        df['PC2'] = df_pca[:, 1]
         mean_values = df_selected.mean()
         return Kmeans, scaler, pca, df, relevant_features, mean_values
     except FileNotFoundError:
@@ -82,25 +84,42 @@ cluster_info = {
 # Cluster visualization and data exploration
 st.markdown("### Cluster Visualization")
 if df is not None:
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=df['Income'],
-        y=df['Total_Spend'],
-        mode='markers',
-        marker=dict(
-            color=df['Cluster'], 
-            colorscale=['#3498db', '#e67e22', '#27ae60'], 
-            size=8
-        ),
-        name='All Customers'
-    ))
-    fig.update_layout(
-        title='Customer Clusters: Income vs Total Spend',
-        xaxis_title='Annual Income (k$)',
-        yaxis_title='Total Spend',
-        height=400
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    col_plot1, col_plot2 = st.columns(2)
+
+    with col_plot1:
+        income_cap = df['Income'].quantile(0.99)
+        df_plot = df[df['Income'] <= income_cap]
+        fig = px.scatter(
+            df_plot, x='Income', y='Total_Spend',
+            color=df_plot['Cluster'].map(lambda c: cluster_info[c]['name']),
+            color_discrete_map={
+                cluster_info[0]['name']: '#3498db',
+                cluster_info[1]['name']: '#27ae60',
+                cluster_info[2]['name']: '#e67e22',
+            },
+            title='Customer Clusters: Income vs Total Spend',
+            labels={'Income': 'Annual Income (k$)', 'Total_Spend': 'Total Spend', 'color': 'Cluster'},
+            height=400
+        )
+        fig.update_traces(marker=dict(size=6, opacity=0.8))
+        st.plotly_chart(fig, use_container_width=True)
+
+    with col_plot2:
+        color_map = {0: '#3498db', 1: '#27ae60', 2: '#e67e22'}
+        fig2 = px.scatter(
+            df, x='PC1', y='PC2',
+            color=df['Cluster'].map(lambda c: cluster_info[c]['name']),
+            color_discrete_map={
+                cluster_info[0]['name']: '#3498db',
+                cluster_info[1]['name']: '#27ae60',
+                cluster_info[2]['name']: '#e67e22',
+            },
+            title='Visualization of Clusters (PCA)',
+            labels={'PC1': 'Principal Component 1', 'PC2': 'Principal Component 2', 'color': 'Cluster'},
+            height=400
+        )
+        fig2.update_traces(marker=dict(size=6, opacity=0.8))
+        st.plotly_chart(fig2, use_container_width=True)
 
 # 4. Sidebar Inputs for User
 st.sidebar.title("Customer Profile")
@@ -256,27 +275,6 @@ else:
     # Initial page when the button is not clicked
     st.markdown("---")
     st.info("Enter customer income and spending score in the sidebar to find their segment.")
-    
-    # Customer segments overview
-    st.subheader("Customer Segments Overview")
-    
-    fig = px.scatter(
-        df,
-        x='Income',
-        y='Total_Spend',
-        color=df['Cluster'].astype(str),
-        color_discrete_map={
-            '0': '#3498db',
-            '1': '#e67e22',
-            '2': '#27ae60'
-        },
-        title='Customer Segmentation Map',
-        height=500
-    )
-    
-    fig.update_traces(marker=dict(size=10, opacity=0.7))
-    fig.update_layout(showlegend=True)
-    st.plotly_chart(fig, use_container_width=True)
        
 
 # Cluster samples
