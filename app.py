@@ -12,7 +12,6 @@ st.set_page_config(page_title="Customer Segmentation Dashboard", layout="wide")
 st.sidebar.markdown("**Running file: app.py**")
 
 st.title("📊 Customer Segmentation Dashboard")
-st.write("Uses customer information (Income, Total Spend, Age) to identify which customer segment they belong to.")
 
 # 1. Load model and data
 @st.cache_resource
