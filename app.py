@@ -12,7 +12,7 @@ st.set_page_config(page_title="Customer Segmentation Dashboard", layout="wide")
 st.sidebar.markdown("**Running file: app.py**")
 
 st.title("📊 Customer Segmentation Dashboard")
-st.write("This web app uses customer information (Income, Total Spend, Age) to identify which customer segment they belong to.")
+st.write("Uses customer information (Income, Total Spend, Age) to identify which customer segment they belong to.")
 
 # 1. Load model and data
 @st.cache_resource
@@ -123,7 +123,6 @@ st.sidebar.markdown("---")
 segment_btn = st.sidebar.button("Predict Segment", type="primary", use_container_width=True)
 
 # 3. Main page
-st.write("This web app predicts which segment a customer falls into based on their details.")
 
 if segment_btn:
     # Build a full input row using the user values and training averages
