@@ -5,13 +5,15 @@ import joblib
 from sklearn.decomposition import PCA
 import plotly.graph_objects as go
 import plotly.express as px
+import warnings
 
 # Page configuration
-st.set_page_config(page_title="Customer Segmentation Dashboard", layout="wide")
+st.set_page_config(page_title="Customer Segmentation App", layout="wide")
 
 st.sidebar.markdown("**Running file: app.py**")
 
-st.title("📊 Customer Segmentation Dashboard")
+st.title("Customer Segmentation App")
+st.write("This web app uses customer information like Income, Total Spend, Age ... to identify which customer segment they belong to.")
 
 # 1. Load model and data
 @st.cache_resource
@@ -26,7 +28,7 @@ def load_model_and_data():
 
         # Recreate the features used in training
         df['Dt_Customer'] = pd.to_datetime(df['Dt_Customer'], dayfirst=True)
-        current_date = pd.Timestamp.today()
+        current_date = pd.to_datetime('2026-04-18')
         df['Tenure'] = (current_date - df['Dt_Customer']).dt.days
         df['Age'] = 2026 - df['Year_Birth']
         mnt_cols = [col for col in df.columns if col.startswith('Mnt')]
@@ -41,15 +43,17 @@ def load_model_and_data():
 
         df = df.dropna(subset=relevant_features)
         df_selected = df[relevant_features].copy()
-        scaled = scaler.transform(df_selected.fillna(0))
+        scaled = scaler.transform(df_selected.fillna(0).values) 
 
         pca = PCA(n_components=2)
         df_pca = pca.fit_transform(scaled)
 
-        # Pre-predict clusters for all customers
-        df['Cluster'] = Kmeans.predict(df_pca)
+        # Add PCA components as columns for visualization
         df['PC1'] = df_pca[:, 0]
         df['PC2'] = df_pca[:, 1]
+
+        # Pre-predict clusters for all customers
+        df['Cluster'] = Kmeans.predict(df_pca)
         mean_values = df_selected.mean()
         return Kmeans, scaler, pca, df, relevant_features, mean_values
     except FileNotFoundError:
@@ -64,61 +68,21 @@ if Kmeans is None:
 # Cluster details
 cluster_info = {
     0: {
-        'name': 'Cautious Spenders', # low income/spending
-        'color': '#3498db',
-        'strategy': 'Offer value-based incentives to encourage more spending.'
+        'name': 'Steady Consumers',
+        'color': '#e67e22',
+        'strategy': 'Target with loyalty programs, bundle deals, and consistent engagement to gradually increase their spending.'
     },
     1: {
-        'name': 'High-Value Spenders', #high income/spending
-        'color': '#27ae60',
-        'strategy': 'Offer premium services and exclusive VIP perks.'
+        'name': 'Cautious Spenders',
+        'color': '#3498db',
+        'strategy': 'Offer value-based incentives, discounts, and affordable product recommendations to encourage more spending.'
     },
     2: {
-        'name': 'Steady Consumers', # medium income/spending
-        'color': '#e67e22',
-        'strategy': 'Target with loyalty programs and consistent engagement.'
+        'name': 'High-Value Spenders',
+        'color': '#27ae60',
+        'strategy': 'Offer premium services, exclusive VIP perks, and personalized luxury experiences to retain their high loyalty.'
     }
 }
-
-# Cluster visualization and data exploration
-st.markdown("### Cluster Visualization")
-if df is not None:
-    col_plot1, col_plot2 = st.columns(2)
-
-    with col_plot1:
-        income_cap = df['Income'].quantile(0.99)
-        df_plot = df[df['Income'] <= income_cap]
-        fig = px.scatter(
-            df_plot, x='Income', y='Total_Spend',
-            color=df_plot['Cluster'].map(lambda c: cluster_info[c]['name']),
-            color_discrete_map={
-                cluster_info[0]['name']: '#3498db',
-                cluster_info[1]['name']: '#27ae60',
-                cluster_info[2]['name']: '#e67e22',
-            },
-            title='Customer Clusters: Income vs Total Spend',
-            labels={'Income': 'Annual Income (k$)', 'Total_Spend': 'Total Spend', 'color': 'Cluster'},
-            height=400
-        )
-        fig.update_traces(marker=dict(size=6, opacity=0.8))
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col_plot2:
-        color_map = {0: '#3498db', 1: '#27ae60', 2: '#e67e22'}
-        fig2 = px.scatter(
-            df, x='PC1', y='PC2',
-            color=df['Cluster'].map(lambda c: cluster_info[c]['name']),
-            color_discrete_map={
-                cluster_info[0]['name']: '#3498db',
-                cluster_info[1]['name']: '#27ae60',
-                cluster_info[2]['name']: '#e67e22',
-            },
-            title='Visualization of Clusters (PCA)',
-            labels={'PC1': 'Principal Component 1', 'PC2': 'Principal Component 2', 'color': 'Cluster'},
-            height=400
-        )
-        fig2.update_traces(marker=dict(size=6, opacity=0.8))
-        st.plotly_chart(fig2, use_container_width=True)
 
 # 4. Sidebar Inputs for User
 st.sidebar.title("Customer Profile")
@@ -139,8 +103,6 @@ teenhome = st.sidebar.number_input('Teen Home', min_value=0, max_value=5, value=
 
 st.sidebar.markdown("---")
 segment_btn = st.sidebar.button("Predict Segment", type="primary", use_container_width=True)
-
-# 3. Main page
 
 if segment_btn:
     # Build a full input row using the user values and training averages
@@ -273,21 +235,63 @@ if segment_btn:
 else:
     # Initial page when the button is not clicked
     st.markdown("---")
-    st.info("Enter customer information in the sidebar to find their segment.")
 
-    # Cluster samples
-    st.markdown("---")
-    st.subheader("Cluster Samples")
+    # Cluster visualization
+    st.markdown("### Cluster Visualization")
+    col_plot1, col_plot2 = st.columns(2)
 
-    samples = df.sample(n=min(5, len(df)), random_state=42)[
-        ['Cluster', 'Income', 'Age', 'Total_Spend', 'Recency',
-         'NumWebPurchases', 'NumCatalogPurchases', 'NumStorePurchases',
-         'NumWebVisitsMonth', 'NumDealsPurchases', 'Kidhome', 'Teenhome']
-    ].copy()
+    with col_plot1:
+        income_cap = df['Income'].quantile(0.99)
+        df_plot = df[df['Income'] <= income_cap]
+        color_discrete_map = {info['name']: info['color'] for info in cluster_info.values()}
+        fig = px.scatter(
+            df_plot, x='Income', y='Total_Spend',
+            color=df_plot['Cluster'].map(lambda c: cluster_info[c]['name']),
+            color_discrete_map=color_discrete_map,
+            title='Customer Clusters: Income vs Total Spend',
+            labels={'Income': 'Annual Income ($)', 'Total_Spend': 'Total Spend', 'color': 'Cluster'},
+            height=400
+        )
+        fig.update_traces(marker=dict(size=6, opacity=0.8))
+        fig.update_layout(margin=dict(l=40, r=20, t=40, b=40))
+        st.plotly_chart(fig, use_container_width=True)
 
-    samples['Cluster'] = samples['Cluster'].map(lambda c: cluster_info[c]['name'])
-    samples.columns = ['Segment', 'Income', 'Age', 'Total Spend', 'Recency',
-                       'Web Purchases', 'Catalog Purchases', 'Store Purchases',
-                       'Web Visits/Month', 'Deals Purchases', 'Kid Home', 'Teen Home']
+    with col_plot2:
+        color_discrete_map = {info['name']: info['color'] for info in cluster_info.values()}
+        fig2 = px.scatter(
+            df, x='PC1', y='PC2',
+            color=df['Cluster'].map(lambda c: cluster_info[c]['name']),
+            color_discrete_map=color_discrete_map,
+            title='Visualization of Clusters (PCA)',
+            labels={'PC1': 'Principal Component 1', 'PC2': 'Principal Component 2', 'color': 'Cluster'},
+            height=400
+        )
+        fig2.update_traces(marker=dict(size=6, opacity=0.8))
+        fig2.update_layout(margin=dict(l=40, r=20, t=40, b=40))
+        st.plotly_chart(fig2, use_container_width=True)
 
-    st.dataframe(samples.reset_index(drop=True), use_container_width=True, hide_index=True)
+    st.info("Enter customer income and spending score in the sidebar to find their segment.")
+
+    # Cluster samples table
+    st.markdown("### Cluster Samples")
+    rows = []
+    for cluster_id in range(3):
+        sample = df[df['Cluster'] == cluster_id].sample(1, random_state=42).iloc[0]
+        rows.append({
+            'Segment': cluster_info[cluster_id]['name'],
+            'Income': int(sample['Income']),
+            'Age': int(sample['Age']),
+            'Total Spend': int(sample['Total_Spend']),
+            'Recency': int(sample['Recency']),
+            'Num Web Purchases': int(sample['NumWebPurchases']),
+            'Num Catalog Purchases': int(sample['NumCatalogPurchases']),
+            'Num Store Purchases': int(sample['NumStorePurchases']),
+            'Num Web Visits Month': int(sample['NumWebVisitsMonth']),
+            'Num Deals Purchases': int(sample['NumDealsPurchases']),
+            'Kid Home': int(sample['Kidhome']),
+            'Teen Home': int(sample['Teenhome'])
+        })
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+       
+
+
