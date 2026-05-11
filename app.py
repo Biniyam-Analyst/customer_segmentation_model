@@ -263,7 +263,7 @@ else:
     # Initial page when the button is not clicked
     st.markdown("---")
 
-    st.info("Enter customer informations  in the sidebar to find their segment.")
+    st.info("Enter customer informations in the sidebar to find their segment.")
 
     # Cluster samples table
     st.markdown("### Cluster Samples")
