@@ -12,7 +12,7 @@ st.set_page_config(page_title="Customer Segmentation App", layout="wide")
 
 st.sidebar.markdown("**Running file: app.py**")
 
-st.title("Customer Segmentation App")
+
 st.write("This web app uses customer information like Income, Total Spend, Age ... to identify which customer segment they belong to.")
 
 # 1. Load model and data
@@ -54,12 +54,24 @@ def load_model_and_data():
 
         # Pre-predict clusters for all customers
         df['Cluster'] = Kmeans.predict(df_pca)
-        mean_values = df_selected.mean()
-        return Kmeans, scaler, pca, df, relevant_features, mean_values
-    except FileNotFoundError:
-        return None, None, None, None, None, None
 
-Kmeans, scaler, pca, df, relevant_features, mean_values = load_model_and_data()
+        # Dynamically remap cluster labels based on actual avg spend
+        # so naming is always correct regardless of model's internal numbering
+        cluster_avg = df.groupby('Cluster')['Total_Spend'].mean().sort_values()
+        sorted_clusters = cluster_avg.index.tolist()
+        remap = {
+            sorted_clusters[0]: 0,  # lowest spend  → Cautious Spenders
+            sorted_clusters[1]: 2,  # mid spend      → Steady Consumers
+            sorted_clusters[2]: 1,  # highest spend  → High-Value Spenders
+        }
+        df['Cluster'] = df['Cluster'].map(remap)
+
+        mean_values = df_selected.mean()
+        return Kmeans, scaler, pca, df, relevant_features, mean_values, remap
+    except FileNotFoundError:
+        return None, None, None, None, None, None, None
+
+Kmeans, scaler, pca, df, relevant_features, mean_values, cluster_remap = load_model_and_data()
 
 if Kmeans is None:
     st.error("Could not load the model or data! Please make sure the files exist.")
@@ -125,7 +137,7 @@ if segment_btn:
     input_scaled = scaler.transform(input_df)
     input_pca = pca.transform(input_scaled)
 
-    predicted_cluster = int(Kmeans.predict(input_pca)[0])
+    predicted_cluster = int(cluster_remap.get(int(Kmeans.predict(input_pca)[0]), int(Kmeans.predict(input_pca)[0])))
     cluster_details = cluster_info.get(predicted_cluster, {'name': 'Unknown', 'color': '#bdc3c7', 'strategy': 'N/A'})
 
     # Isolate customers of the predicted cluster
