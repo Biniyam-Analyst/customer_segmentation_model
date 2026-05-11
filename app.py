@@ -68,19 +68,19 @@ if Kmeans is None:
 # Cluster details
 cluster_info = {
     0: {
-        'name': 'Steady Consumers',
-        'color': '#e67e22',
-        'strategy': 'Target with loyalty programs, bundle deals, and consistent engagement to gradually increase their spending.'
-    },
-    1: {
         'name': 'Cautious Spenders',
         'color': '#3498db',
         'strategy': 'Offer value-based incentives, discounts, and affordable product recommendations to encourage more spending.'
     },
-    2: {
+    1: {
         'name': 'High-Value Spenders',
         'color': '#27ae60',
         'strategy': 'Offer premium services, exclusive VIP perks, and personalized luxury experiences to retain their high loyalty.'
+    },
+    2: {
+        'name': 'Steady Consumers',
+        'color': '#e67e22',
+        'strategy': 'Target with loyalty programs, bundle deals, and consistent engagement to gradually increase their spending.'
     }
 }
 
